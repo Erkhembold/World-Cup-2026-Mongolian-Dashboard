@@ -21,7 +21,7 @@ st.markdown("""
     .stMetric { background-color: rgba(28, 131, 225, 0.1); padding: 15px; border-radius: 10px; border-left: 5px solid #1C83E1; }
     div[data-testid="stForm"] { border: 1px solid rgba(49, 51, 63, 0.2); border-radius: 10px; padding: 20px; }
     </style>
-""", unsafe_html=True)
+""", unsafe_allow_html=True)
 
 # ==========================================
 # SESSION STATE & DATA INITIALIZATION
@@ -165,75 +165,4 @@ if page == "📊 Dashboard Overview":
         st.metric(label="Total Net Profit/Loss", value=f"${total_pl:,.2f}", delta=f"{((total_pl/total_inv)*100 if total_inv > 0 else 0):+.2f}%", delta_color=pl_color)
     with m3:
         active_assets = len(summary_df) if not summary_df.empty else 0
-        st.metric(label="Active Traded Assets", value=str(active_assets), delta=f"Total Trades Logged: {len(transactions_df)}")
-        
-    st.markdown("---")
-    
-    g1, g2 = st.columns([3, 2])
-    with g1:
-        st.subheader("Historical Performance Curve")
-        if not history_df.empty:
-            fig_line = px.line(history_df, x="Date", y="Portfolio Value ($)", template="plotly_dark", color_discrete_sequence=["#1C83E1"])
-            fig_line.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
-            st.plotly_chart(fig_line, use_container_width=True)
-        else:
-            st.info("No tracking milestones recorded.")
-            
-    with g2:
-        st.subheader("Asset Allocation Split")
-        if not summary_df.empty:
-            fig_pie = px.pie(summary_df, values="Current Value", names="Asset", hole=0.4, template="plotly_dark")
-            fig_pie.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-    st.markdown("---")
-    st.subheader("Asset Allocation Breakdown Matrix")
-    if not summary_df.empty:
-        st.dataframe(summary_df.style.format({
-            "Avg Buy Price": "${:,.2f}", "Current Price": "${:,.2f}", "Current Value": "${:,.2f}",
-            "Net Invested": "${:,.2f}", "Profit / Loss": "${:,.2f}", "Return %": "{:+.2f}%"
-        }), use_container_width=True, hide_index=True)
-
-elif page == "💸 Transaction Ledger":
-    st.title("Transaction Ledger & Asset Management")
-    
-    form_col, management_col = st.columns([1, 1])
-    with form_col:
-        st.subheader("➕ Log New Trade Execution")
-        with st.form(key="trade_entry_form", clear_on_submit=True):
-            f_date = st.date_input("Execution Date", value=datetime.now().date())
-            f_asset = st.selectbox("Select Asset Token", list(MARKET_PRICES.keys()))
-            f_type = st.radio("Order Type", ["Buy", "Sell"], horizontal=True)
-            f_qty = st.number_input("Token Quantity", min_value=0.0001, step=0.01, format="%.4f")
-            f_price = st.number_input("Execution Price Per Unit ($)", min_value=0.01, step=1.0, format="%.2f")
-            
-            submit_trade = st.form_submit_button("Commit Trade Order", type="primary")
-            if submit_trade:
-                total_cost = f_qty * f_price
-                if f_type == "Sell" and not summary_df.empty:
-                    current_holding = summary_df[summary_df['Asset'] == f_asset]['Holdings'].sum()
-                    if f_qty > current_holding:
-                        st.error(f"Short-selling rejected. Max available to sell: {current_holding}")
-                        st.stop()
-
-                new_order = {"ID": int(st.session_state['next_id']), "Date": f_date, "Asset": f_asset, "Type": f_type, "Quantity": float(f_qty), "Price": float(f_price), "Total": float(total_cost)}
-                st.session_state['transactions'] = pd.concat([st.session_state['transactions'], pd.DataFrame([new_order])], ignore_index=True)
-                st.session_state['next_id'] += 1
-                st.rerun()
-
-    with management_col:
-        st.subheader("🗑️ Database Row Deletion")
-        if not transactions_df.empty:
-            target_id = st.selectbox("Select Target Transaction ID to Purge", options=transactions_df['ID'].tolist())
-            if st.button("Purge Target Record From Memory", type="primary", use_container_width=True):
-                st.session_state['transactions'] = transactions_df[transactions_df['ID'] != target_id]
-                st.rerun()
-
-    st.markdown("---")
-    st.subheader("Audit Trail Ledger Logs")
-    st.dataframe(transactions_df.sort_values(by="Date", ascending=False), use_container_width=True, hide_index=True)
-
-elif page == "⚙️ Market Price Feeds":
-    st.title("Market Pricing Engine Feeds")
-    price_data = [{"Asset": k, "Assigned Valuation Price": f"${v:,.2f}"} for k, v in MARKET_PRICES.items()]
-    st.table(pd.DataFrame(price_data))
+        st.metric(label="Active Traded Assets", value=str
