@@ -1,291 +1,223 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import plotly.express as px
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # ==========================================
-# PAGE CONFIGURATION & THEME
+# PAGE CONFIGURATION & FOOTBALL DARK THEME
 # ==========================================
 st.set_page_config(
-    page_title="AlphaTrack // Portfolio Dashboard",
-    page_icon="📈",
+    page_title="ШИГШЭЭ 2026 // FIFA World Cup",
+    page_icon="⚽",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for a clean, premium developer UI
+# Injecting clean developer CSS directly into Streamlit to control look and feel
 st.markdown("""
     <style>
-    .main .block-container { padding-top: 2rem; }
-    .stMetric { background-color: rgba(28, 131, 225, 0.1); padding: 15px; border-radius: 10px; border-left: 5px solid #1C83E1; }
-    div[data-testid="stForm"] { border: 1px solid rgba(49, 51, 63, 0.2); border-radius: 10px; padding: 20px; }
+    .main .block-container { padding-top: 1rem; }
+    
+    /* Live Top Ticker Row */
+    .ticker-container {
+        background-color: #0d1117;
+        padding: 12px;
+        border-bottom: 2px solid #10b981;
+        margin-bottom: 25px;
+        border-radius: 6px;
+    }
+    .ticker-text {
+        color: #f1f5f9;
+        font-family: 'Segoe UI', monospace;
+        font-size: 13px;
+    }
+    .live-dot {
+        background-color: #ef4444;
+        color: white;
+        padding: 2px 6px;
+        font-weight: bold;
+        border-radius: 4px;
+        font-size: 11px;
+    }
+    
+    /* Custom Match and News Cards */
+    .match-card {
+        background-color: #161b22;
+        border: 1px solid #21262d;
+        border-radius: 8px;
+        padding: 18px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    .news-card {
+        background-color: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 10px;
+        padding: 20px;
+        height: 100%;
+    }
+    
+    /* Badges */
+    .tag-badge {
+        background-color: #d97706;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    .group-sub {
+        color: #10b981;
+        font-size: 12px;
+        font-weight: bold;
+        margin-top: 4px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# SESSION STATE & DATA INITIALIZATION
+# UPPER LIVE MATCH TICKER
 # ==========================================
-if 'transactions' not in st.session_state:
-    st.session_state['transactions'] = pd.DataFrame([
-        {"ID": 1, "Date": (datetime.now() - timedelta(days=12)).date(), "Asset": "BTC", "Type": "Buy", "Quantity": 0.65, "Price": 62500.0, "Total": 40625.0},
-        {"ID": 2, "Date": (datetime.now() - timedelta(days=8)).date(), "Asset": "ETH", "Type": "Buy", "Quantity": 4.5, "Price": 3200.0, "Total": 14400.0},
-        {"ID": 3, "Date": (datetime.now() - timedelta(days=4)).date(), "Asset": "BTC", "Type": "Sell", "Quantity": 0.15, "Price": 67000.0, "Total": 10050.0},
-        {"ID": 4, "Date": (datetime.now() - timedelta(days=2)).date(), "Asset": "SOL", "Type": "Buy", "Quantity": 35.0, "Price": 145.0, "Total": 5075.0},
-        {"ID": 5, "Date": (datetime.now() - timedelta(days=1)).date(), "Asset": "AAPL", "Type": "Buy", "Quantity": 20.0, "Price": 180.0, "Total": 3600.0}
-    ])
-
-if 'next_id' not in st.session_state:
-    st.session_state['next_id'] = 6
-
-MARKET_PRICES = {
-    "BTC": 68500.0,
-    "ETH": 3550.0,
-    "SOL": 162.5,
-    "AAPL": 188.3,
-    "GOOG": 174.5,
-    "NVDA": 127.4
-}
+st.markdown("""
+<div class="ticker-container">
+    <span class="ticker-text">
+        <span class="live-dot">ШУУД ОНОО</span> 
+        &nbsp;&nbsp; Саудын Араб vs Уругвай | <span style="color:#ef4444; font-weight:bold;">1:1 (Нэгдүгээр үе 81')</span> 
+        &nbsp;&nbsp;•&nbsp;&nbsp; БНСУ vs Чех | <span style="color:#10b981;">2:1 (FT)</span> 
+        &nbsp;&nbsp;•&nbsp;&nbsp; Канад vs Босни Герцеговин | <span style="color:#10b981;">1:1 (FT)</span> 
+        &nbsp;&nbsp;•&nbsp;&nbsp; АНУ vs Парагвай | <span style="color:#10b981;">4:1 (FT)</span> 
+        &nbsp;&nbsp;•&nbsp;&nbsp; Испани vs Кабо-Верде | <span style="color:#8b949e;">0:0 (FT)</span>
+    </span>
+</div>
+""", unsafe_allow_html=True)
 
 # ==========================================
-# CORE CALCULATIONS ENGINE
+# SIDEBAR NAVIGATION CONTROLS
 # ==========================================
-def calculate_portfolio_metrics(df):
-    if df.empty:
-        return pd.DataFrame(), 0.0, 0.0, 0.0
-    
-    summary_data = []
-    unique_assets = df['Asset'].unique()
-    
-    for asset in unique_assets:
-        asset_df = df[df['Asset'] == asset]
-        buys = asset_df[asset_df['Type'] == 'Buy']
-        sells = asset_df[asset_df['Type'] == 'Sell']
-        
-        total_qty_bought = buys['Quantity'].sum()
-        total_spent = buys['Total'].sum()
-        total_qty_sold = sells['Quantity'].sum()
-        total_received = sells['Total'].sum()
-        
-        net_qty = total_qty_bought - total_qty_sold
-        if net_qty <= 0:
-            continue
-            
-        avg_buy_price = (total_spent / total_qty_bought) if total_qty_bought > 0 else 0
-        current_price = MARKET_PRICES.get(asset, 1.0)
-        current_value = net_qty * current_price
-        
-        net_invested = total_spent - total_received
-        profit_loss = current_value - net_invested
-        pl_percentage = (profit_loss / net_invested * 100) if net_invested > 0 else 0.0
-        
-        summary_data.append({
-            "Asset": asset,
-            "Holdings": round(net_qty, 4),
-            "Avg Buy Price": round(avg_buy_price, 2),
-            "Current Price": current_price,
-            "Current Value": round(current_value, 2),
-            "Net Invested": round(net_invested, 2),
-            "Profit / Loss": round(profit_loss, 2),
-            "Return %": round(pl_percentage, 2)
-        })
-        
-    summary_df = pd.DataFrame(summary_data)
-    if summary_df.empty:
-        return pd.DataFrame(), 0.0, 0.0, 0.0
-        
-    total_current_value = summary_df['Current Value'].sum()
-    total_net_invested = summary_df['Net Invested'].sum()
-    total_profit_loss = total_current_value - total_net_invested
-    
-    return summary_df, total_current_value, total_net_invested, total_profit_loss
-
-def generate_historical_trend(df):
-    if df.empty:
-        return pd.DataFrame(columns=["Date", "Portfolio Value"])
-    
-    start_date = df['Date'].min()
-    end_date = datetime.now().date()
-    date_range = pd.date_range(start_date, end_date)
-    
-    history = []
-    for current_day in date_range:
-        day_date = current_day.date()
-        past_df = df[df['Date'] <= day_date]
-        
-        day_value = 0.0
-        for asset in past_df['Asset'].unique():
-            asset_past = past_df[past_df['Asset'] == asset]
-            qty = 0.0
-            for _, row in asset_past.iterrows():
-                if row['Type'] == 'Buy':
-                    qty += row['Quantity']
-                else:
-                    qty -= row['Quantity']
-            
-            price = MARKET_PRICES.get(asset, 1.0)
-            days_ago = (end_date - day_date).days
-            simulated_price = price * (1 + (np.sin(days_ago * 0.1) * 0.02))
-            day_value += max(0.0, qty * simulated_price)
-            
-        history.append({"Date": day_date, "Portfolio Value ($)": round(day_value, 2)})
-        
-    return pd.DataFrame(history)
-
-# Process current calculations
-transactions_df = st.session_state['transactions']
-summary_df, total_val, total_inv, total_pl = calculate_portfolio_metrics(transactions_df)
-history_df = generate_historical_trend(transactions_df)
-
-# ==========================================
-# SIDEBAR NAVIGATION
-# ==========================================
-st.sidebar.title("⚡ AlphaTrack Pro")
+st.sidebar.title("🟢 ШИГШЭЭ 2026")
 st.sidebar.markdown("---")
-page = st.sidebar.radio(
-    "Navigation Menu", 
-    ["📊 Dashboard Overview", "💸 Transaction Ledger", "⚙️ Market Price Feeds"]
+navigation = st.sidebar.radio(
+    "Үндсэн цэс", 
+    ["📊 НҮҮР (Эргэн тойронд)", "📰 МЭДЭЭ (FIFA Сурвалжлага)", "🔮 ТОГЛОЛТЫН ТААМАГЛАЛ"]
 )
-
 st.sidebar.markdown("---")
-st.sidebar.markdown("### System Health")
-st.sidebar.success("Database Status: Connected")
-st.sidebar.info(f"Cache Synchronized: {datetime.now().strftime('%H:%M:%S')}")
+st.sidebar.caption(f"Синхрончлогдсон хугацаа: {datetime.now().strftime('%H:%M:%S')}")
 
 # ==========================================
-# PAGE ROUTING & VIEWS
+# VIEW ROUTING
 # ==========================================
 
-if page == "📊 Dashboard Overview":
-    st.title("Portfolio Dashboard Analytics")
-    st.markdown("Real-time performance metrics and asset distribution matrices.")
+if navigation == "📊 НҮҮР (Эргэн тойронд)":
+    st.caption("ОНЦЛОХ МЭДЭЭЛЛИЙН ТӨВ")
+    st.title("FIFA ДАШТ 2026 — Монгол Хөгжөөн Дэмжигчдийн Төв")
     
-    m1, m2, m3 = st.columns(3)
+    st.markdown("### 🔴 Өнөөдрийн Тоглолтууд")
+    
+    # Grid columns matching the original layout parameters
+    m1, m2, m3, m4 = st.columns(4)
+    
     with m1:
-        st.metric(
-            label="Total Asset Valuation", 
-            value=f"${total_val:,.2f}", 
-            delta=f"Net Allocation: ${total_inv:,.2f}", 
-            delta_color="off"
-        )
-    with m2:
-        pl_color = "normal" if total_pl >= 0 else "inverse"
-        pct = (total_pl / total_inv * 100 if total_inv > 0 else 0)
-        st.metric(
-            label="Total Net Profit/Loss", 
-            value=f"${total_pl:,.2f}", 
-            delta=f"{pct:+.2f}%", 
-            delta_color=pl_color
-        )
-    with m3:
-        active_assets = len(summary_df) if not summary_df.empty else 0
-        st.metric(
-            label="Active Traded Assets", 
-            value=str(active_assets), 
-            delta=f"Total Trades Logged: {len(transactions_df)}"
-        )
+        st.markdown("""
+        <div class="match-card" style="border-left: 4px solid #ef4444;">
+            <p style="color:#ef4444; font-size:12px; font-weight:bold; margin:0;">● LIVE 81'</p>
+            <h4 style="margin:12px 0; color:#ffffff;">Саудын Араб <span style="color:#ef4444;">1 - 1</span> Уругвай</h4>
+            <p style="color:#9ca3af; font-size:12px; margin:0;">Н Бүлэг • Хүчтэй тулаан</p>
+        </div>
+        """, unsafe_allow_html=True)
         
+    with m2:
+        st.markdown("""
+        <div class="match-card" style="border-left: 4px solid #8b949e;">
+            <p style="color:#8b949e; font-size:12px; font-weight:bold; margin:0;">FT</p>
+            <h4 style="margin:12px 0; color:#ffffff;">Испани <span style="color:#8b949e;">0 - 0</span> Кабо-Верде</h4>
+            <p style="color:#9ca3af; font-size:12px; margin:0;">Н Бүлэг • Тэнцээ</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with m3:
+        st.markdown("""
+        <div class="match-card" style="border-left: 4px solid #d97706;">
+            <p style="color:#d97706; font-size:12px; font-weight:bold; margin:0;">МАГАДЛАЛТАЙ</p>
+            <h4 style="margin:12px 0; color:#ffffff;">Иран <span style="color:#d97706;">vs</span> Шинэ Зеланд</h4>
+            <p style="color:#9ca3af; font-size:12px; margin:0;">G Бүлэг • Орой 18:00 цагт</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with m4:
+        st.markdown("""
+        <div class="match-card" style="border-left: 4px solid #d97706;">
+            <p style="color:#d97706; font-size:12px; font-weight:bold; margin:0;">МАГАДЛАЛТАЙ</p>
+            <h4 style="margin:12px 0; color:#ffffff;">Франц <span style="color:#d97706;">vs</span> Сенегал</h4>
+            <p style="color:#9ca3af; font-size:12px; margin:0;">I Бүлэг • Шөнө 21:00 цагт</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("---")
     
-    g1, g2 = st.columns([3, 2])
-    with g1:
-        st.subheader("Historical Performance Curve")
-        if not history_df.empty:
-            fig_line = px.line(
-                history_df, 
-                x="Date", 
-                y="Portfolio Value ($)", 
-                template="plotly_dark", 
-                color_discrete_sequence=["#1C83E1"]
-            )
-            fig_line.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
-            st.plotly_chart(fig_line, use_container_width=True)
-        else:
-            st.info("No tracking milestones recorded.")
-            
-    with g2:
-        st.subheader("Asset Allocation Split")
-        if not summary_df.empty:
-            fig_pie = px.pie(
-                summary_df, 
-                values="Current Value", 
-                names="Asset", 
-                hole=0.4, 
-                template="plotly_dark"
-            )
-            fig_pie.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
-            st.plotly_chart(fig_pie, use_container_width=True)
+    st.markdown("""
+    <div style="background-color:#161b22; padding:25px; border-radius:10px; border:1px solid #21262d;">
+        <span class="tag-badge">НЭЭЛТИЙН ТОГЛОЛТ — А БҮЛЭГ</span>
+        <h2 style="margin-top:12px; color:#ffffff;">Ацтека цэнгэлдэхэд түүхэн нээлт — Мексик хүчирхэг эхлэлийг тавилаа</h2>
+        <p style="color:#c9d1d9; font-size:15px; line-height:1.6; margin-bottom:0;">
+            Домогт Ацтека цэнгэлдэх хүрээлэнд явагдсан нээлтийн тоглолтод талбайн эзэд Өмнөд Африкийн багийг 2:0 харьцаатайгаар 
+            итгэл төгс буулган авч, бүлгээ тэргүүлж эхэллээ. Түүхэн нээлтийн уур амьсгал цэнгэлдэх даяар гайхалтай байлаа.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.subheader("Asset Allocation Breakdown Matrix")
-    if not summary_df.empty:
-        st.dataframe(summary_df.style.format({
-            "Avg Buy Price": "${:,.2f}", 
-            "Current Price": "${:,.2f}", 
-            "Current Value": "${:,.2f}",
-            "Net Invested": "${:,.2f}", 
-            "Profit / Loss": "${:,.2f}", 
-            "Return %": "{:+.2f}%"
-        }), use_container_width=True, hide_index=True)
-
-elif page == "💸 Transaction Ledger":
-    st.title("Transaction Ledger & Asset Management")
+elif navigation == "📰 МЭДЭЭ (FIFA Сурвалжлага)":
+    st.title("Мэдээ мэдээлэл — ДАШТ 2026")
     
-    form_col, management_col = st.columns([1, 1])
-    with form_col:
-        st.subheader("➕ Log New Trade Execution")
-        with st.form(key="trade_entry_form", clear_on_submit=True):
-            f_date = st.date_input("Execution Date", value=datetime.now().date())
-            f_asset = st.selectbox("Select Asset Token", list(MARKET_PRICES.keys()))
-            f_type = st.radio("Order Type", ["Buy", "Sell"], horizontal=True)
-            f_qty = st.number_input("Token Quantity", min_value=0.0001, step=0.01, format="%.4f")
-            f_price = st.number_input("Execution Price Per Unit ($)", min_value=0.01, step=1.0, format="%.2f")
-            
-            submit_trade = st.form_submit_button("Commit Trade Order", type="primary")
-            if submit_trade:
-                total_cost = f_qty * f_price
-                if f_type == "Sell" and not summary_df.empty:
-                    current_holding = summary_df[summary_df['Asset'] == f_asset]['Holdings'].sum()
-                    if f_qty > current_holding:
-                        st.error(f"Short-selling rejected. Max available to sell: {current_holding}")
-                        st.stop()
+    n1, n2, n3 = st.columns(3)
+    
+    with n1:
+        st.markdown("""
+        <div class="news-card">
+            <span class="tag-badge">ОНЦЛОХ МЭДЭЭ</span>
+            <p class="group-sub">С БҮЛЭГ</p>
+            <h3 style="color:#ffffff; margin-top:10px;">Лионель Месси ДАШТ 2026-ын бэлтгэлээ бүрэн хангаж, гараанд гарахад бэлэн болжээ</h3>
+            <p style="color:#8b949e; font-size:14px; line-height:1.5;">
+                Аргентины шилдэг багийн ахлагч өөрийн сүүлийн ДАШТ-ий тактик бэлтгэлдээ ямар нэгэн бэртэлгүй оролцлоо. 
+                Тэрээр өөрийн сүүлийн тэмцээнийг албан ёсоор ялалтаар эхлүүлэхийг зорьж байна.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with n2:
+        st.markdown("""
+        <div class="news-card">
+            <span class="tag-badge">ТАЛБАЙН ЭЗЭД</span>
+            <p class="group-sub">А БҮЛЭГ</p>
+            <h3 style="color:#ffffff; margin-top:10px;">Ацтека цэнгэлдэх хөдөлгөөнд дарагдав: Мексикийн довтолгоо Өмнөд Африкийг сандаргав</h3>
+            <p style="color:#8b949e; font-size:14px; line-height:1.5;">
+                Хөгжөөн дэмжигчдийн нүргээн дунд Хулиан Киньонес болон Рауль Хименес нарын гайхалтай довтолгоо 
+                талбайн эзэд эхний 3 оноо авахад голлох үүргийг гүйцэтгэж, багийн тактикийг амжилттай болголоо.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with n3:
+        st.markdown("""
+        <div class="news-card">
+            <span class="tag-badge">ТАКТИК ШИНЖИЛГЭЭ</span>
+            <p class="group-sub">D БҮЛЭГ</p>
+            <h3 style="color:#ffffff; margin-top:10px;">Кристиан Пулишичийн тактик дуулиан тарив: АНУ-ын шигшээ Парагвайг 4-1 бут ниргэлээ</h3>
+            <p style="color:#8b949e; font-size:14px; line-height:1.5;">
+                SoFi Stadium-д явагдсан тоглолтод Пулишич тоглолтыг бүрэн удирдаж, 1 гол, 2 оновчтой дамжуулалт өгснөөр 
+                тоглолтын шилдэг тоглогч болсон бөгөөд Парагвайн хамгаалалтыг бүрэн эвдэж чадлаа.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-                new_order = {
-                    "ID": int(st.session_state['next_id']), 
-                    "Date": f_date, 
-                    "Asset": f_asset, 
-                    "Type": f_type, 
-                    "Quantity": float(f_qty), 
-                    "Price": float(f_price), 
-                    "Total": float(total_cost)
-                }
-                st.session_state['transactions'] = pd.concat(
-                    [st.session_state['transactions'], pd.DataFrame([new_order])], 
-                    ignore_index=True
-                )
-                st.session_state['next_id'] += 1
-                st.rerun()
-
-    with management_col:
-        st.subheader("🗑️ Database Row Deletion")
-        if not transactions_df.empty:
-            target_id = st.selectbox(
-                "Select Target Transaction ID to Purge", 
-                options=transactions_df['ID'].tolist()
-            )
-            if st.button("Purge Target Record From Memory", type="primary", use_container_width=True):
-                st.session_state['transactions'] = transactions_df[transactions_df['ID'] != target_id]
-                st.rerun()
-
-    st.markdown("---")
-    st.subheader("Audit Trail Ledger Logs")
-    st.dataframe(
-        transactions_df.sort_values(by="Date", ascending=False), 
-        use_container_width=True, 
-        hide_index=True
-    )
-
-elif page == "⚙️ Market Price Feeds":
-    st.title("Market Pricing Engine Feeds")
-    price_data = [{"Asset": k, "Assigned Valuation Price": f"${v:,.2f}"} for k, v in MARKET_PRICES.items()]
-    st.table(pd.DataFrame(price_data))
+elif navigation == "🔮 ТОГЛОЛТЫН ТААМАГЛАЛ":
+    st.title("🔮 Тэмцээний Үр Дүн Тааварлах")
+    st.markdown("Удахгүй болох тоглолтуудын оноог тааж системд бүртгүүлээрэй.")
+    
+    with st.form("prediction_engine"):
+        st.subheader("Иран vs Шинэ Зеланд")
+        score_iran = st.number_input("Иран Улсын Оноо", min_value=0, max_value=15, step=1, value=0)
+        score_nz = st.number_input("Шинэ Зеланд Улсын Оноо", min_value=0, max_value=15, step=1, value=0)
+        
+        submit_btn = st.form_submit_button("Таамаглалыг Илгээх", type="primary")
+        if submit_btn:
+            st.success(f"Таны таамаглал амжилттай хадгалагдлаа: Иран {score_iran} - {score_nz} Шинэ Зеланд")
