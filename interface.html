@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaTrack Portfolio Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>ALPHATRACK</span>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="#" class="menu-item active"><i class="fa-solid fa-gauge"></i> Overview</a>
+                <a href="#" class="menu-item"><i class="fa-solid fa-receipt"></i> Ledger</a>
+                <a href="#" class="menu-item"><i class="fa-solid fa-gears"></i> Settings</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="main-header">
+                <h1>Dashboard Overview</h1>
+                <div class="status-badge">System Live</div>
+            </header>
+
+            <section class="metrics-grid">
+                <div class="card card-blue">
+                    <h3>Total Valuation</h3>
+                    <div class="metric-value">$124,500.00</div>
+                    <p class="metric-sub">Net Cost Basis: $95,000</p>
+                </div>
+                <div class="card card-green">
+                    <h3>Net Profit / Loss</h3>
+                    <div class="metric-value">+$29,500.00</div>
+                    <p class="metric-sub profit">+31.05% overall</p>
+                </div>
+                <div class="card card-indigo">
+                    <h3>Active Positions</h3>
+                    <div class="metric-value">6 Assets</div>
+                    <p class="metric-sub">Across 4 exchanges</p>
+                </div>
+            </section>
+
+            <section class="content-split">
+                <div class="data-box">
+                    <h2>Asset Distribution Matrix</h2>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Holdings</th>
+                                <th>Avg Price</th>
+                                <th>Current Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>BTC</strong></td>
+                                <td>1.2400</td>
+                                <td>$62,500</td>
+                                <td>$84,940</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ETH</strong></td>
+                                <td>8.5000</td>
+                                <td>$3,200</td>
+                                <td>$30,175</td>
+                            </tr>
+                            <tr>
+                                <td><strong>SOL</strong></td>
+                                <td>58.0000</td>
+                                <td>$145</td>
+                                <td>$9,425</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+</body>
+</html>
